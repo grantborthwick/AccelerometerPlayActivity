@@ -16,6 +16,10 @@
 
 package com.example.android.accelerometerplay;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.List;
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -31,6 +35,7 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Surface;
@@ -614,16 +619,77 @@ public class AccelerometerPlayActivity extends Activity {
 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		}
 	}
-
+	public class Node{
+		public boolean visited;
+		public boolean isGoal;
+		private Node[] Neighbors;
+		private int count;
+		int x,y;
+		
+		public Node(int i, int j){
+			Neighbors = new Node[4];
+			visited = false;
+			isGoal = false;
+			count = 0;
+			x=i;
+			y=j;
+		}
+		public void addNeightbor(Node i){
+			Neighbors[count++] = i;
+		}
+		public boolean Validate() {
+			if(isGoal){
+				return true;
+			}
+			visited = true;
+			boolean Valid = false;
+			for(int i=0;!Valid && i<count;++i){
+				if(!Neighbors[i].visited){Valid |= Neighbors[i].Validate();}
+			}
+			if (Valid){
+				int a = 3;
+			}
+			return Valid;			
+		}
+	}
 	public void GenerateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY ) {
-		for (int i = 0; i < CellCountX; i++) {
-			for (int j = 0; j < CellCountY; j++) {
-				X[i][j] = Math.random()>=.5;
-				Y[i][j] = Math.random()>=.5;//*/
-				/*X[i][j] = false;
-				Y[i][j] = false;//*/
+		do{
+			for (int i = 0; i < CellCountX; i++) {
+				for (int j = 0; j < CellCountY; j++) {
+					X[i][j] = Math.random()>=.5;
+					Y[i][j] = Math.random()>=.5;//*/
+					/*X[i][j] = true;
+					Y[i][j] = true;//*/
+				}
+			}
+		}while(!ValidateMaze(X,Y,CellCountX, CellCountY));
+		int end = 0;
+	}
+	public boolean ValidateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY){
+		Node[][] Nodes = new Node[CellCountX][CellCountY];
+		for(int i=0;i<CellCountX;++i){
+			for(int j=0;j<CellCountY;++j){
+				Nodes[i][j]=new Node(i,j);
 			}
 		}
-		
+		Nodes[CellCountX-1][CellCountY-1].isGoal = true;
+		for (int i = 0; i<CellCountX;++i){
+			for (int j=0;j<CellCountY;++j){
+				if ((i+1)!=CellCountX && !Y[i][j]){
+					Nodes[i][j].addNeightbor(Nodes[i+1][j]);
+					Nodes[i+1][j].addNeightbor(Nodes[i][j]);
+				}
+				if ((j+1)!=CellCountY && !X[i][j]){
+					Nodes[i][j].addNeightbor(Nodes[i][j+1]);
+					Nodes[i][j+1].addNeightbor(Nodes[i][j]);
+				}
+			}
+		}
+		boolean valid = Nodes[0][0].Validate();
+		if(valid==true){
+			return valid;
+		}
+		return valid;
+		//return true;
 	}
 }
