@@ -227,6 +227,7 @@ public class AccelerometerPlayActivity extends Activity {
 				float BoxW = w/CellCountX;
 				float BoxH = h/CellCountY;
 				float maxXPixels,minXPixels,maxYPixels,minYPixels;
+				
 				if(wallArrayY[mBoxX][mBoxY]){maxXPixels = (mBoxX+1)*BoxW - w/2-1;}
 				else{maxXPixels = (mBoxX+2)*BoxW - w/2-1;}
 				if(mBoxX==0 || wallArrayY[mBoxX-1][mBoxY]){minXPixels = (mBoxX)*BoxW - w/2+1;}
@@ -235,6 +236,7 @@ public class AccelerometerPlayActivity extends Activity {
 				else{maxYPixels = (mBoxY-1)*BoxH - h/2+1;}
 				if(wallArrayX[mBoxX][mBoxY]){minYPixels = (mBoxY+1)*BoxH - h/2+1;}
 				else{minYPixels = (mBoxY+2)*BoxH - h/2+1;}
+				
 				float xmax = Math.min(maxXPixels/xs - sBallDiameter/2,mHorizontalBound);
 				float xmin = Math.max(minXPixels/xs + sBallDiameter/2,-mHorizontalBound);
 				float ymax = Math.min(-maxYPixels/ys - sBallDiameter/2,mVerticalBound);
@@ -248,8 +250,27 @@ public class AccelerometerPlayActivity extends Activity {
 				else if (y < ymin) { mPosY = ymin; }
 				int NewXBox = getBoxXFromPixel(xc + x*xs);
 				int NewYBox = getBoxYFromPixel(yc - y*ys);
-				if (NewXBox != mBoxX && NewYBox != mBoxY){
+				boolean test = false;
+				if (NewXBox != mBoxX && NewYBox != mBoxY && mBoxX>=0 && mBoxY>=0 && NewXBox>=0&&NewYBox>=0){
+					/*int dx=NewXBox-mBoxX;
+					int dy=NewYBox-mBoxY;
 					
+					if(dx>0){
+						if(dy>0){
+							if(wallArrayY[NewXBox][mBoxY] && wallArrayX[mBoxX][NewYBox]){test = true;}
+						}else{
+							if(wallArrayY[mBoxX][NewYBox] && wallArrayX[NewXBox][mBoxY]){test = true;}
+						}
+					}else{
+						if(dy>0){
+							if(wallArrayY[NewXBox][NewYBox] && wallArrayX[NewXBox][mBoxY]){test = true;}
+						}else{
+							if(wallArrayY[NewXBox][NewYBox] && wallArrayX[NewXBox][NewYBox]){test = true;}
+						}
+					}
+					if(test){
+						int a = 0;
+					}*/
 				}
 				else{
 					mBoxX = getBoxXFromPixel(xc + mPosX*xs);
@@ -282,7 +303,7 @@ public class AccelerometerPlayActivity extends Activity {
 				final long t = timestamp;
 				if (mLastT != 0) {
 					final float dT = (float) (t - mLastT)
-							* (1.0f / 1000000000.0f);
+							* (1.0f / 2500000000.0f);
 					if (mLastDeltaT != 0) {
 						final float dTC = dT / mLastDeltaT;
 						final int count = mBalls.length;
@@ -457,14 +478,6 @@ public class AccelerometerPlayActivity extends Activity {
 			line = new Paint();
 			line.setColor(Color.YELLOW);
 			line.setStrokeWidth(3);
-			
-			linex = new Paint();
-			linex.setColor(Color.BLUE);
-			linex.setStrokeWidth(3);
-			
-			liney = new Paint();
-			liney.setColor(Color.GREEN);
-			liney.setStrokeWidth(3);
 		}
 
 		@Override
@@ -535,13 +548,13 @@ public class AccelerometerPlayActivity extends Activity {
 					{
 						canvas.drawLine(
 								boxWidth*i,boxHeight*(j+1),
-								boxWidth*(i+1),boxHeight*(j+1),linex
+								boxWidth*(i+1),boxHeight*(j+1),line
 								);
 					}
 					if (wallArrayY[i][j]){
 						canvas.drawLine(
 								boxWidth*(i+1),boxHeight*j,
-								boxWidth*(i+1),boxHeight*(j+1),liney
+								boxWidth*(i+1),boxHeight*(j+1),line
 								);
 					}
 				}
