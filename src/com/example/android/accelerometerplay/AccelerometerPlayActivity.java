@@ -113,12 +113,11 @@ public class AccelerometerPlayActivity extends Activity {
 
 	class SimulationView extends View implements SensorEventListener {
 		// diameter of the balls in meters
-		private static final float sBallDiameter = 0.01f;
-		private static final float sBallDiameter2 = sBallDiameter
-				* sBallDiameter;
+		private static final float sBallDiameter = 0.005f;
+		private static final float sBallDiameter2 = sBallDiameter * sBallDiameter;
 
 		// friction of the virtual table and air
-		private static final float sFriction = 0.15f;
+		private static final float sFriction = 0.1f;
 
 		private Sensor mAccelerometer;
 		private long mLastT;
@@ -131,6 +130,8 @@ public class AccelerometerPlayActivity extends Activity {
 		private Bitmap mBitmap;
 		private Bitmap mWood;
 		private Paint line;
+		private Paint linex;
+		private Paint liney;
 		private float mXOrigin;
 		private float mYOrigin;
 		private float mSensorX;
@@ -146,8 +147,8 @@ public class AccelerometerPlayActivity extends Activity {
 		private final ParticleSystem mParticleSystem = new ParticleSystem();
 		private boolean wallArrayX[][];
 		private boolean wallArrayY[][];
-		private int CellCountX = 5;
-		private int CellCountY = 8;
+		private int CellCountX = 10;
+		private int CellCountY = 15;
 		private float boxHeight;
 		private float boxWidth;
 		private DisplayMetrics metrics;
@@ -204,10 +205,8 @@ public class AccelerometerPlayActivity extends Activity {
 				 * (1-f) * (x(t) - x(t-Æt)) * (Æt/Æt_prev) + a(t)Ætö2
 				 */
 				final float dTdT = dT * dT;
-				final float x = mPosX + mOneMinusFriction * dTC
-						* (mPosX - mLastPosX) + mAccelX * dTdT;
-				final float y = mPosY + mOneMinusFriction * dTC
-						* (mPosY - mLastPosY) + mAccelY * dTdT;
+				final float x = mPosX + mOneMinusFriction * dTC	* (mPosX - mLastPosX) + mAccelX * dTdT;
+				final float y = mPosY + mOneMinusFriction * dTC	* (mPosY - mLastPosY) + mAccelY * dTdT;
 				mLastPosX = mPosX;
 				mLastPosY = mPosY;
 				mPosX = x;
@@ -222,26 +221,40 @@ public class AccelerometerPlayActivity extends Activity {
 			 * constrained particle in such way that the constraint is
 			 * satisfied.
 			 */
-			public void resolveCollisionWithBounds() {
-				final float xmax = getMaxBoxHorizontalBound(mBoxX,mBoxY);
-				final float xmin = getMinBoxHorizontalBound(mBoxX,mBoxY);
-				float ymax = getMaxBoxVerticalBound(mBoxX,mBoxY); 
-				float ymin = getMinBoxVerticalBound(mBoxX,mBoxY);
-				final float x = mPosX;
-				final float y = mPosY;
-				if (x > xmax) {
-					mPosX = xmax;
-				} else if (x < xmin) {
-					mPosX = xmin;
+			public void resolveCollisionWithBounds() {				
+				float w = metrics.widthPixels;
+				float h = metrics.heightPixels;
+				float BoxW = w/CellCountX;
+				float BoxH = h/CellCountY;
+				float maxXPixels,minXPixels,maxYPixels,minYPixels;
+				if(wallArrayY[mBoxX][mBoxY]){maxXPixels = (mBoxX+1)*BoxW - w/2-1;}
+				else{maxXPixels = (mBoxX+2)*BoxW - w/2-1;}
+				if(mBoxX==0 || wallArrayY[mBoxX-1][mBoxY]){minXPixels = (mBoxX)*BoxW - w/2+1;}
+				else{minXPixels = (mBoxX-1)*BoxW - w/2+1;}
+				if(mBoxY==0||wallArrayX[mBoxX][mBoxY-1]){maxYPixels = (mBoxY)*BoxH - h/2+1;}
+				else{maxYPixels = (mBoxY-1)*BoxH - h/2+1;}
+				if(wallArrayX[mBoxX][mBoxY]){minYPixels = (mBoxY+1)*BoxH - h/2+1;}
+				else{minYPixels = (mBoxY+2)*BoxH - h/2+1;}
+				float xmax = Math.min(maxXPixels/xs - sBallDiameter/2,mHorizontalBound);
+				float xmin = Math.max(minXPixels/xs + sBallDiameter/2,-mHorizontalBound);
+				float ymax = Math.min(-maxYPixels/ys - sBallDiameter/2,mVerticalBound);
+				float ymin = Math.max(-minYPixels/ys + sBallDiameter/2,-mVerticalBound);
+								
+				float x = mPosX;
+				float y = mPosY;
+				if (x > xmax) {	mPosX = xmax; } 
+				else if (x < xmin) { mPosX = xmin; }
+				if (y > ymax) {	mPosY = ymax; } 
+				else if (y < ymin) { mPosY = ymin; }
+				int NewXBox = getBoxXFromPixel(xc + x*xs);
+				int NewYBox = getBoxYFromPixel(yc - y*ys);
+				if (NewXBox != mBoxX && NewYBox != mBoxY){
+					
 				}
-				if (y > ymax) {
-					mPosY = ymax;
-				} else if (y < ymin) {
-					mPosY = ymin;
+				else{
+					mBoxX = getBoxXFromPixel(xc + mPosX*xs);
+					mBoxY = getBoxYFromPixel(yc - mPosY*ys);
 				}
-				mBoxX = getBoxXFromPixel(xc + mPosX*xs);
-				mBoxY = getBoxYFromPixel(yc - mPosY*ys); //I do not know why - instead of +
-				int a = 3;
 			}
 		}
 
@@ -360,14 +373,6 @@ public class AccelerometerPlayActivity extends Activity {
 			public int getBoxY(int i) {
 				return mBalls[i].mBoxY;
 			}
-
-			/*public int getBoxXFromPixel(float i) {// get box from a position
-				return (int) (i / boxWidth);
-			}
-
-			public int getBoxYFromPixel(float i) {// get box from a position
-				return (int) (i / boxHeight);
-			}*/
 		}
 
 		public void startSimulation() {
@@ -382,78 +387,7 @@ public class AccelerometerPlayActivity extends Activity {
 					(SensorManager.SENSOR_DELAY_UI));
 		}
 
-		public float getMaxBoxVerticalBound(int x, int y) {
-			float w = metrics.widthPixels;
-			float h = metrics.heightPixels;
-			float BoxW = w/CellCountX;
-			float BoxH = h/CellCountY;
-			
-			float maxXPixels = (x+1)*BoxW - w/2-1;
-			float minXPixels = (x)*BoxW - w/2+1;
-			float maxYPixels = (y)*BoxH - h/2+1;
-			float minYPixels = (y+1)*BoxH - h/2-1;
-			
-			float maxX = maxXPixels/xs - sBallDiameter/2;
-			float minX = minXPixels/xs + sBallDiameter/2;
-			float maxY = maxYPixels/ys + sBallDiameter/2;
-			float minY = minYPixels/ys - sBallDiameter/2;
-			return -maxY;
-		}
-		
-		public float getMinBoxVerticalBound(int x, int y) {
-			float w = metrics.widthPixels;
-			float h = metrics.heightPixels;
-			float BoxW = w/CellCountX;
-			float BoxH = h/CellCountY;
-			
-			float maxXPixels = (x+1)*BoxW - w/2-1;
-			float minXPixels = (x)*BoxW - w/2+1;
-			float maxYPixels = (y)*BoxH - h/2+1;
-			float minYPixels = (y+1)*BoxH - h/2-1;
-			
-			float maxX = maxXPixels/xs - sBallDiameter/2;
-			float minX = minXPixels/xs + sBallDiameter/2;
-			float maxY = maxYPixels/ys + sBallDiameter/2;
-			float minY = minYPixels/ys - sBallDiameter/2;
-			return -minY;
-		}
-
-		public float getMaxBoxHorizontalBound(int x, int y) {
-			float w = metrics.widthPixels;
-			float h = metrics.heightPixels;
-			float BoxW = w/CellCountX;
-			float BoxH = h/CellCountY;
-			
-			float maxXPixels = (x+1)*BoxW - w/2-1;
-			float minXPixels = (x)*BoxW - w/2+1;
-			float maxYPixels = (y)*BoxH - h/2+1;
-			float minYPixels = (y+1)*BoxH - h/2-1;
-			
-			float maxX = maxXPixels/xs - sBallDiameter/2;
-			float minX = minXPixels/xs + sBallDiameter/2;
-			float maxY = maxYPixels/ys + sBallDiameter/2;
-			float minY = minYPixels/ys - sBallDiameter/2;
-			return maxX;
-		}
-		
-		public float getMinBoxHorizontalBound(int x, int y) {
-			float w = metrics.widthPixels;
-			float h = metrics.heightPixels;
-			float BoxW = w/CellCountX;
-			float BoxH = h/CellCountY;
-			
-			float maxXPixels = (x+1)*BoxW - w/2-1;
-			float minXPixels = (x)*BoxW - w/2+1;
-			float maxYPixels = (y)*BoxH - h/2+1;
-			float minYPixels = (y+1)*BoxH - h/2-1;
-			
-			float maxX = maxXPixels/xs - sBallDiameter/2;
-			float minX = minXPixels/xs + sBallDiameter/2;
-			float maxY = maxYPixels/ys + sBallDiameter/2;
-			float minY = minYPixels/ys - sBallDiameter/2;
-			return minX;
-		}
-		
+				
 		public int getBoxXFromMeter(float i) {// get box from a position
 			return (int) (i *xs / boxWidth);
 		}
@@ -501,6 +435,7 @@ public class AccelerometerPlayActivity extends Activity {
 
 				}
 			}
+			GenerateMaze(wallArrayX,wallArrayY,CellCountX,CellCountY);
 
 			int ballHeight = (int) (sBallDiameter * mMetersToPixelsY + .5f);
 			int ballWidth = (int) (sBallDiameter * mMetersToPixelsX + .5f);
@@ -522,6 +457,14 @@ public class AccelerometerPlayActivity extends Activity {
 			line = new Paint();
 			line.setColor(Color.YELLOW);
 			line.setStrokeWidth(3);
+			
+			linex = new Paint();
+			linex.setColor(Color.BLUE);
+			linex.setStrokeWidth(3);
+			
+			liney = new Paint();
+			liney.setColor(Color.GREEN);
+			liney.setStrokeWidth(3);
 		}
 
 		@Override
@@ -584,14 +527,23 @@ public class AccelerometerPlayActivity extends Activity {
 			canvas.drawBitmap(mWood, 0, 0, null);
 
 			// Draw Walls
+			float boxWidth = this.boxWidth;
+			float boxHeight = this.boxHeight;
 			for (int i = 0; i < wallArrayX.length; i++) {
 				for (int j = 0; j < wallArrayY[i].length; j++) {
 					if (wallArrayX[i][j])
-						canvas.drawLine(i * boxWidth, j * boxHeight, i
-								* boxWidth + boxWidth, j * boxHeight, line);
-					if (wallArrayY[i][j])
-						canvas.drawLine(i * boxWidth, j * boxHeight, i
-								* boxWidth, j * boxHeight + boxHeight, line);
+					{
+						canvas.drawLine(
+								boxWidth*i,boxHeight*(j+1),
+								boxWidth*(i+1),boxHeight*(j+1),linex
+								);
+					}
+					if (wallArrayY[i][j]){
+						canvas.drawLine(
+								boxWidth*(i+1),boxHeight*j,
+								boxWidth*(i+1),boxHeight*(j+1),liney
+								);
+					}
 				}
 			}
 			// Draw Borders
@@ -602,6 +554,10 @@ public class AccelerometerPlayActivity extends Activity {
 			canvas.drawLine(metrics.widthPixels - 2, 0,
 					metrics.widthPixels - 2, metrics.heightPixels, line);
 
+			//Start and end text.
+			canvas.drawText("START", boxWidth/2, boxHeight/2, line);
+			canvas.drawText("END!!", metrics.widthPixels-boxWidth/2, metrics.heightPixels-boxHeight/2, line);
+			
 			/*
 			 * compute the new position of our object, based on accelerometer
 			 * data and present time.
@@ -644,5 +600,17 @@ public class AccelerometerPlayActivity extends Activity {
 		@Override
 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		}
+	}
+
+	public void GenerateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY ) {
+		for (int i = 0; i < CellCountX; i++) {
+			for (int j = 0; j < CellCountY; j++) {
+				X[i][j] = Math.random()>=.5;
+				Y[i][j] = Math.random()>=.5;//*/
+				/*X[i][j] = false;
+				Y[i][j] = false;//*/
+			}
+		}
+		
 	}
 }
