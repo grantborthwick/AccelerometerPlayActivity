@@ -135,8 +135,7 @@ public class AccelerometerPlayActivity extends Activity {
 		private Bitmap mBitmap;
 		private Bitmap mWood;
 		private Paint line;
-		private Paint linex;
-		private Paint liney;
+		private Paint TrapPaint;
 		private float mXOrigin;
 		private float mYOrigin;
 		private float mSensorX;
@@ -154,6 +153,8 @@ public class AccelerometerPlayActivity extends Activity {
 		private boolean wallArrayY[][];
 		private int CellCountX = 10;
 		private int CellCountY = 15;
+		private boolean Traps[][];
+		private int TrapCount = (int)(CellCountX*CellCountY/5f);
 		private float boxHeight;
 		private float boxWidth;
 		private DisplayMetrics metrics;
@@ -400,7 +401,7 @@ public class AccelerometerPlayActivity extends Activity {
 				return mBalls[i].mBoxY;
 			}
 		}
-
+		
 		public void startSimulation() {
 			/*
 			 * It is not necessary to get accelerometer events at a very high
@@ -452,37 +453,38 @@ public class AccelerometerPlayActivity extends Activity {
 
 			wallArrayX = new boolean[CellCountX][CellCountY];
 			wallArrayY = new boolean[CellCountX][CellCountY];
+			Traps = new boolean[CellCountX][CellCountY];
 
 			// Set all to true:
 			for (int i = 0; i < CellCountX; i++) {
 				for (int j = 0; j < CellCountY; j++) {
 					wallArrayX[i][j] = true;
 					wallArrayY[i][j] = true;
+					Traps[i][j]=false;
 
 				}
 			}
-			GenerateMaze(wallArrayX,wallArrayY,CellCountX,CellCountY);
+			GenerateMaze(wallArrayX,wallArrayY,CellCountX,CellCountY, Traps, TrapCount);
 
 			int ballHeight = (int) (sBallDiameter * mMetersToPixelsY + .5f);
 			int ballWidth = (int) (sBallDiameter * mMetersToPixelsX + .5f);
 
 			// rescale the ball so it's about 0.5 cm on screen
-			Bitmap ball = BitmapFactory.decodeResource(getResources(),
-					R.drawable.ball);
-			mBitmap = Bitmap.createScaledBitmap(ball, ballWidth, ballHeight,
-					true);
+			Bitmap ball = BitmapFactory.decodeResource(getResources(),R.drawable.ball);
+			mBitmap = Bitmap.createScaledBitmap(ball, ballWidth, ballHeight,true);
 
 			Options opts = new Options();
 			opts.inDither = true;
 			opts.inPreferredConfig = Bitmap.Config.RGB_565;
-			mWood = BitmapFactory.decodeResource(getResources(),
-					R.drawable.wood, opts);
-			mWood = Bitmap.createScaledBitmap(mWood, metrics.widthPixels,
-					metrics.heightPixels, true);
+			mWood = BitmapFactory.decodeResource(getResources(),R.drawable.wood, opts);
+			mWood = Bitmap.createScaledBitmap(mWood, metrics.widthPixels,metrics.heightPixels, true);
 
 			line = new Paint();
 			line.setColor(Color.YELLOW);
 			line.setStrokeWidth(3);
+			
+			TrapPaint = new Paint();
+			TrapPaint.setColor(Color.BLACK);
 		}
 
 		@Override
@@ -548,7 +550,7 @@ public class AccelerometerPlayActivity extends Activity {
 			float boxWidth = this.boxWidth;
 			float boxHeight = this.boxHeight;
 			for (int i = 0; i < wallArrayX.length; i++) {
-				for (int j = 0; j < wallArrayY[i].length; j++) {
+				for (int j = 0; j < wallArrayY[0].length; j++) {
 					if (wallArrayX[i][j])
 					{
 						canvas.drawLine(
@@ -571,7 +573,15 @@ public class AccelerometerPlayActivity extends Activity {
 					metrics.heightPixels - 2, line);
 			canvas.drawLine(metrics.widthPixels - 2, 0,
 					metrics.widthPixels - 2, metrics.heightPixels, line);
-
+			//Traps
+			for(int i=0; i<Traps.length;++i){
+				for(int j=0; j<Traps[0].length;++j){
+					if(Traps[i][j]){
+						canvas.drawCircle((i+.5f)*boxWidth, (j+.5f)*boxHeight, Math.min(boxWidth/2, boxHeight/2)-2, TrapPaint);
+					}
+				}
+			}
+			
 			//Start and end text.
 			canvas.drawText("START", boxWidth/2, boxHeight/2, line);
 			canvas.drawText("END!!", metrics.widthPixels-boxWidth/2, metrics.heightPixels-boxHeight/2, line);
@@ -619,6 +629,7 @@ public class AccelerometerPlayActivity extends Activity {
 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		}
 	}
+	
 	public class Node{
 		public boolean visited;
 		public boolean isGoal;
@@ -652,20 +663,36 @@ public class AccelerometerPlayActivity extends Activity {
 			return Valid;			
 		}
 	}
-	public void GenerateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY ) {
+	
+
+	
+	public void GenerateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY, boolean[][] Traps, int TrapCount ) {
+		//Make traps!
 		do{
+			//Walls!
 			for (int i = 0; i < CellCountX; i++) {
 				for (int j = 0; j < CellCountY; j++) {
 					X[i][j] = Math.random()>=.5;
 					Y[i][j] = Math.random()>=.5;//*/
+					Traps[i][j]=false;
 					/*X[i][j] = true;
 					Y[i][j] = true;//*/
 				}
 			}
-		}while(!ValidateMaze(X,Y,CellCountX, CellCountY));
+			//Traps!
+			for(int i = 0; i < TrapCount; ++i){
+				boolean again;
+				do{
+					int x = (int)(Math.random()*CellCountX);
+					int y = (int)(Math.random()*CellCountY);
+					again = (x==0&&y==0)||(x == CellCountX-1 && y == CellCountY-1) && !Traps[x][y];
+					if (!again){Traps[x][y]=true;}
+				} while(again);
+			}
+		}while(!ValidateMaze(X,Y,CellCountX, CellCountY, Traps, TrapCount));
 		int end = 0;
 	}
-	public boolean ValidateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY){
+	public boolean ValidateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY, boolean[][] Traps, int TrapCount){
 		Node[][] Nodes = new Node[CellCountX][CellCountY];
 		for(int i=0;i<CellCountX;++i){
 			for(int j=0;j<CellCountY;++j){
@@ -675,20 +702,18 @@ public class AccelerometerPlayActivity extends Activity {
 		Nodes[CellCountX-1][CellCountY-1].isGoal = true;
 		for (int i = 0; i<CellCountX;++i){
 			for (int j=0;j<CellCountY;++j){
-				if ((i+1)!=CellCountX && !Y[i][j]){
+				
+				if ((i+1)!=CellCountX && !Y[i][j] && !Traps[i][j] && !Traps[i+1][j]){
 					Nodes[i][j].addNeightbor(Nodes[i+1][j]);
 					Nodes[i+1][j].addNeightbor(Nodes[i][j]);
 				}
-				if ((j+1)!=CellCountY && !X[i][j]){
+				if ((j+1)!=CellCountY && !X[i][j]&& !Traps[i][j] && !Traps[i][j+1]){
 					Nodes[i][j].addNeightbor(Nodes[i][j+1]);
 					Nodes[i][j+1].addNeightbor(Nodes[i][j]);
 				}
 			}
 		}
 		boolean valid = Nodes[0][0].Validate();
-		if(valid==true){
-			return valid;
-		}
 		return valid;
 		//return true;
 	}
