@@ -16,10 +16,6 @@
 
 package com.example.android.accelerometerplay;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.List;
-
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -35,7 +31,6 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
-import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Surface;
@@ -151,6 +146,7 @@ public class AccelerometerPlayActivity extends Activity {
 		private final ParticleSystem mParticleSystem = new ParticleSystem();
 		private boolean wallArrayX[][];
 		private boolean wallArrayY[][];
+		private Box[][] Boxes;
 		private int CellCountX = 10;
 		private int CellCountY = 15;
 		private boolean Traps[][];
@@ -175,6 +171,8 @@ public class AccelerometerPlayActivity extends Activity {
 
 			private int mBoxX;
 			private int mBoxY;
+			private int mLastBoxX;
+			private int mLastBoxY;
 
 			Particle() {
 				// make each particle a bit different by randomizing its
@@ -250,35 +248,23 @@ public class AccelerometerPlayActivity extends Activity {
 								
 				float x = mPosX;
 				float y = mPosY;
+				mLastPosX=mPosX;
+				mLastPosY=mPosY;
+				//Might switch this back to main edges, or change to allow outside of bounds area.
 				if (x > xmax) {	mPosX = xmax; } 
 				else if (x < xmin) { mPosX = xmin; }
 				if (y > ymax) {	mPosY = ymax; } 
 				else if (y < ymin) { mPosY = ymin; }
+				//Need to figure out which boxes must be passed through and then which borders need to be checked.
 				int NewXBox = getBoxXFromPixel(xc + x*xs);
 				int NewYBox = getBoxYFromPixel(yc - y*ys);
 				boolean test = false;
 				if (NewXBox != mBoxX && NewYBox != mBoxY && mBoxX>=0 && mBoxY>=0 && NewXBox>=0&&NewYBox>=0){
-					/*int dx=NewXBox-mBoxX;
-					int dy=NewYBox-mBoxY;
 					
-					if(dx>0){
-						if(dy>0){
-							if(wallArrayY[NewXBox][mBoxY] && wallArrayX[mBoxX][NewYBox]){test = true;}
-						}else{
-							if(wallArrayY[mBoxX][NewYBox] && wallArrayX[NewXBox][mBoxY]){test = true;}
-						}
-					}else{
-						if(dy>0){
-							if(wallArrayY[NewXBox][NewYBox] && wallArrayX[NewXBox][mBoxY]){test = true;}
-						}else{
-							if(wallArrayY[NewXBox][NewYBox] && wallArrayX[NewXBox][NewYBox]){test = true;}
-						}
-					}
-					if(test){
-						int a = 0;
-					}*/
 				}
 				else{
+					mLastBoxX = mBoxX;
+					mLastBoxY = mBoxY;
 					mBoxX = getBoxXFromPixel(xc + mPosX*xs);
 					mBoxY = getBoxYFromPixel(yc - mPosY*ys);
 				}
@@ -314,8 +300,7 @@ public class AccelerometerPlayActivity extends Activity {
 						final float dTC = dT / mLastDeltaT;
 						final int count = mBalls.length;
 						for (int i = 0; i < count; i++) {
-							Particle ball = mBalls[i];
-							ball.computePhysics(sx, sy, dT, dTC);
+							mBalls[i].computePhysics(sx, sy, dT, dTC);
 						}
 					}
 					mLastDeltaT = dT;
@@ -453,6 +438,7 @@ public class AccelerometerPlayActivity extends Activity {
 
 			wallArrayX = new boolean[CellCountX][CellCountY];
 			wallArrayY = new boolean[CellCountX][CellCountY];
+			Boxes = new Box[CellCountX][CellCountY];
 			Traps = new boolean[CellCountX][CellCountY];
 
 			// Set all to true:
@@ -464,7 +450,7 @@ public class AccelerometerPlayActivity extends Activity {
 
 				}
 			}
-			GenerateMaze(wallArrayX,wallArrayY,CellCountX,CellCountY, Traps, TrapCount);
+			GenerateMaze(wallArrayX,wallArrayY,CellCountX,CellCountY, Traps, TrapCount, Boxes);
 
 			int ballHeight = (int) (sBallDiameter * mMetersToPixelsY + .5f);
 			int ballWidth = (int) (sBallDiameter * mMetersToPixelsX + .5f);
@@ -630,43 +616,54 @@ public class AccelerometerPlayActivity extends Activity {
 		}
 	}
 	
-	public class Node{
+	public class Box{
 		public boolean visited;
 		public boolean isGoal;
-		private Node[] Neighbors;
-		private int count;
+		public boolean hasLeft;
+		public boolean hasRight;
+		public boolean hasUp;
+		public boolean hasDown;
+		public Box Left;
+		public Box Right;
+		public Box Up;
+		public Box Down;
 		int x,y;
 		
-		public Node(int i, int j){
-			Neighbors = new Node[4];
+		public Box(int i, int j){
 			visited = false;
 			isGoal = false;
-			count = 0;
 			x=i;
 			y=j;
 		}
-		public void addNeightbor(Node i){
-			Neighbors[count++] = i;
+		public void addLeftNeighbor(Box i){
+			Left = i;
+			hasLeft = (i!=null);
+		}
+		public void addRightNeighbor(Box i){
+			Right = i;
+			hasRight = (i!=null);
+		}
+		public void addUpNeighbor(Box i){
+			Up = i;
+			hasUp = (i!=null);
+		}
+		public void addDownNeighbor(Box i){
+			Down = i;
+			hasDown = (i!=null);
 		}
 		public boolean Validate() {
-			if(isGoal){
-				return true;
-			}
 			visited = true;
-			boolean Valid = false;
-			for(int i=0;!Valid && i<count;++i){
-				if(!Neighbors[i].visited){Valid |= Neighbors[i].Validate();}
-			}
-			if (Valid){
-				int a = 3;
-			}
-			return Valid;			
+			return isGoal || 
+					(hasLeft && !Left.visited && Left.Validate()) || 
+					(hasRight && !Right.visited && Right.Validate())||
+					(hasUp && !Up.visited && Up.Validate()) ||
+					(hasDown && !Down.visited && Down.Validate());		
 		}
 	}
 	
 
 	
-	public void GenerateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY, boolean[][] Traps, int TrapCount ) {
+	public void GenerateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY, boolean[][] Traps, int TrapCount, Box[][] Boxes ) {
 		//Make traps!
 		do{
 			//Walls!
@@ -689,31 +686,30 @@ public class AccelerometerPlayActivity extends Activity {
 					if (!again){Traps[x][y]=true;}
 				} while(again);
 			}
-		}while(!ValidateMaze(X,Y,CellCountX, CellCountY, Traps, TrapCount));
+		}while(!ValidateMaze(X,Y,CellCountX, CellCountY, Traps, TrapCount,Boxes));
 		int end = 0;
 	}
-	public boolean ValidateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY, boolean[][] Traps, int TrapCount){
-		Node[][] Nodes = new Node[CellCountX][CellCountY];
+	public boolean ValidateMaze(boolean[][] X, boolean[][] Y, int CellCountX, int CellCountY, boolean[][] Traps, int TrapCount, Box[][] Boxes){
 		for(int i=0;i<CellCountX;++i){
 			for(int j=0;j<CellCountY;++j){
-				Nodes[i][j]=new Node(i,j);
+				Boxes[i][j]=new Box(i,j);
 			}
 		}
-		Nodes[CellCountX-1][CellCountY-1].isGoal = true;
+		Boxes[CellCountX-1][CellCountY-1].isGoal = true;
 		for (int i = 0; i<CellCountX;++i){
 			for (int j=0;j<CellCountY;++j){
 				
 				if ((i+1)!=CellCountX && !Y[i][j] && !Traps[i][j] && !Traps[i+1][j]){
-					Nodes[i][j].addNeightbor(Nodes[i+1][j]);
-					Nodes[i+1][j].addNeightbor(Nodes[i][j]);
+					Boxes[i][j].addRightNeighbor(Boxes[i+1][j]);
+					Boxes[i+1][j].addLeftNeighbor(Boxes[i][j]);
 				}
 				if ((j+1)!=CellCountY && !X[i][j]&& !Traps[i][j] && !Traps[i][j+1]){
-					Nodes[i][j].addNeightbor(Nodes[i][j+1]);
-					Nodes[i][j+1].addNeightbor(Nodes[i][j]);
+					Boxes[i][j].addDownNeighbor(Boxes[i][j+1]);
+					Boxes[i][j+1].addUpNeighbor(Boxes[i][j]);
 				}
 			}
 		}
-		boolean valid = Nodes[0][0].Validate();
+		boolean valid = Boxes[0][0].Validate();
 		return valid;
 		//return true;
 	}
