@@ -232,7 +232,7 @@ public class AccelerometerPlayActivity extends Activity {
 				float BoxW = w/CellCountX;
 				float BoxH = h/CellCountY;
 				float maxXPixels,minXPixels,maxYPixels,minYPixels;
-				
+
 				if(!Boxes[mBoxX][mBoxY].hasRight){maxXPixels = (mBoxX+1)*BoxW - w/2-1;}
 				else{maxXPixels = (mBoxX+2)*BoxW - w/2-1;}
 				if(!Boxes[mBoxX][mBoxY].hasLeft){minXPixels = (mBoxX)*BoxW - w/2+1;}
@@ -241,12 +241,12 @@ public class AccelerometerPlayActivity extends Activity {
 				else{maxYPixels = (mBoxY-1)*BoxH - h/2+1;}
 				if(!Boxes[mBoxX][mBoxY].hasDown){minYPixels = (mBoxY+1)*BoxH - h/2+1;}
 				else{minYPixels = (mBoxY+2)*BoxH - h/2+1;}
-				
+
 				float xmax = Math.min(maxXPixels/xs - sBallDiameter/2,mHorizontalBound);
 				float xmin = Math.max(minXPixels/xs + sBallDiameter/2,-mHorizontalBound);
 				float ymax = Math.min(-maxYPixels/ys - sBallDiameter/2,mVerticalBound);
 				float ymin = Math.max(-minYPixels/ys + sBallDiameter/2,-mVerticalBound);
-								
+
 				float x = mPosX;
 				float y = mPosY;
 				mLastPosX=mPosX;
@@ -399,7 +399,7 @@ public class AccelerometerPlayActivity extends Activity {
 				return mBalls[i].mBoxY;
 			}
 		}
-		
+
 		public void startSimulation() {
 			/*
 			 * It is not necessary to get accelerometer events at a very high
@@ -412,7 +412,7 @@ public class AccelerometerPlayActivity extends Activity {
 					(SensorManager.SENSOR_DELAY_UI));
 		}
 
-				
+
 		public int getBoxXFromMeter(float i) {// get box from a position
 			return (int) (i *xs / boxWidth);
 		}
@@ -428,7 +428,7 @@ public class AccelerometerPlayActivity extends Activity {
 		public int getBoxYFromPixel(float i) {// get box from a position
 			return (int) (i / boxHeight);
 		}
-		
+
 		public void stopSimulation() {
 			mSensorManager.unregisterListener(this);
 		}
@@ -448,7 +448,7 @@ public class AccelerometerPlayActivity extends Activity {
 			// Create graphics array
 			boxHeight = (metrics.heightPixels / CellCountY);
 			boxWidth = (metrics.widthPixels / CellCountX);
-			
+
 			Boxes = new Box[CellCountX][CellCountY];
 
 			GenerateMaze2(CellCountX,CellCountY, TrapCount, Boxes);
@@ -469,11 +469,11 @@ public class AccelerometerPlayActivity extends Activity {
 			line = new Paint();
 			line.setColor(Color.YELLOW);
 			line.setStrokeWidth(3);
-			
+
 			line2 = new Paint();
 			line2.setColor(Color.CYAN);
 			line2.setStrokeWidth(3);
-			
+
 			TrapPaint = new Paint();
 			TrapPaint.setColor(Color.BLACK);
 		}
@@ -567,11 +567,11 @@ public class AccelerometerPlayActivity extends Activity {
 					metrics.heightPixels - 2, line);
 			canvas.drawLine(metrics.widthPixels - 2, 0,
 					metrics.widthPixels - 2, metrics.heightPixels, line);
-			
+
 			//Start and end text.
 			canvas.drawText("START", boxWidth/2, boxHeight/2, line);
 			canvas.drawText("END!!", metrics.widthPixels-boxWidth/2, metrics.heightPixels-boxHeight/2, line);
-			
+
 			/*
 			 * compute the new position of our object, based on accelerometer
 			 * data and present time.
@@ -615,7 +615,7 @@ public class AccelerometerPlayActivity extends Activity {
 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
 		}
 	}
-	
+
 	public class Box{
 		public boolean visited;
 		public boolean isGoal;
@@ -630,7 +630,7 @@ public class AccelerometerPlayActivity extends Activity {
 		public Box Down;
 		public int numNeighbors;
 		int x,y;
-				
+
 		public Box(int i, int j){
 			visited = false;
 			isGoal = false;
@@ -660,7 +660,7 @@ public class AccelerometerPlayActivity extends Activity {
 			}else if (y<i.y){addDownNeighbor(i);}
 			else{addUpNeighbor(i);}
 		}
-		
+
 		public boolean Validate() {
 			visited = true;
 			return !isTrap && 
@@ -685,9 +685,9 @@ public class AccelerometerPlayActivity extends Activity {
 			return Neighbors[(int)(Math.random()*count)];
 		}
 	}
-	
 
-	
+
+
 	public void GenerateMaze2(int CellCountX, int CellCountY, int TrapCount, Box[][] Boxes ) {
 		//Make traps!
 		boolean valid;
@@ -745,8 +745,8 @@ public class AccelerometerPlayActivity extends Activity {
 					Nodes.add(NextNode);
 				}
 			}
-			
-			
+
+
 		}while(/*!ValidateMaze(CellCountX, CellCountY, TrapCount,Boxes)*/!valid);
 		int end = 0;
 	}
