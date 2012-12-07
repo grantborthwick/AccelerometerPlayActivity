@@ -21,6 +21,7 @@ import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -39,6 +40,8 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
+import android.app.AlertDialog;
 
 /**
  * This is an example of using the accelerometer to integrate the device's
@@ -54,12 +57,14 @@ import android.view.WindowManager;
 
 public class AccelerometerPlayActivity extends Activity {
 
+	final Context context = this;
 	private SimulationView mSimulationView;
 	private SensorManager mSensorManager;
 	private PowerManager mPowerManager;
 	private WindowManager mWindowManager;
 	private Display mDisplay;
 	private WakeLock mWakeLock;
+    private boolean pause = false;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -81,13 +86,25 @@ public class AccelerometerPlayActivity extends Activity {
 				PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getClass().getName());
 
 		// instantiate our simulation view and set it as the activity's content
-		mSimulationView = new SimulationView(this);
+		Intent intent = getIntent();
+		Bundle bundle = intent.getExtras();
+		int CcX = bundle.getInt("CcX");
+		int CcY = bundle.getInt("CcY");
+		int level = bundle.getInt("level");//Fix show toast with level or show on screen.
+		mSimulationView = new SimulationView(this,CcX,CcY);
+		
 		setContentView(mSimulationView);
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
+		//pause = false;
+		int mx = mSimulationView.mParticleSystem.mBalls[0].mBoxX;
+		int my = mSimulationView.mParticleSystem.mBalls[0].mBoxY;
+		mSimulationView.Boxes[mx][my].isTrap = false;
+		pause = false;
+		Toast toast = Toast.makeText(context, "You've fallen down a hole!", "You've fallen down a hole!".length());
 		/*
 		 * when the activity is resumed, we acquire a wake-lock so that the
 		 * screen stays on, since the user will likely not be fiddling with the
@@ -102,6 +119,7 @@ public class AccelerometerPlayActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
+		pause = true;
 		/*
 		 * When the activity is paused, we make sure to stop the simulation,
 		 * release our sensor resources and wake locks
@@ -114,18 +132,23 @@ public class AccelerometerPlayActivity extends Activity {
 		mWakeLock.release();
 	}
 
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data){
+		super.onActivityResult(requestCode, resultCode, data);
+		if(resultCode!=requestCode){
+			finish();
+		}
+	}
+	
 	class SimulationView extends View implements SensorEventListener {
 		// diameter of the balls in meters
-		private static final float sBallDiameter = 0.003f;
-		private static final float sBallDiameter2 = sBallDiameter * sBallDiameter;
-
+		
 		// friction of the virtual table and air
 		private static final float sFriction = 0.1f;
 
 		private Sensor mAccelerometer;
 		private long mLastT;
 		private float mLastDeltaT;
-
 		private float mXDpi;
 		private float mYDpi;
 		private float mMetersToPixelsX;
@@ -149,8 +172,10 @@ public class AccelerometerPlayActivity extends Activity {
 		private float ys;
 		private final ParticleSystem mParticleSystem = new ParticleSystem();
 		private Box[][] Boxes;
-		private int CellCountX = 18;
-		private int CellCountY = 24;
+		private int CellCountX = 20;
+		private int CellCountY = 30;
+		private float sBallDiameter = 0.003f;
+		private float sBallDiameter2 = sBallDiameter * sBallDiameter;
 		private int TrapCount = (int)(CellCountX*CellCountY/7f);
 		private float boxHeight;
 		private float boxWidth;
@@ -268,7 +293,22 @@ public class AccelerometerPlayActivity extends Activity {
 					mBoxX = getBoxXFromPixel(xc + mPosX*xs);
 					mBoxY = getBoxYFromPixel(yc - mPosY*ys);
 					if(Boxes[mBoxX][mBoxY].isTrap){
-						mBoxX = 0;
+						if(!pause){
+							Toast toast = Toast.makeText(context, "You've fallen down a hole!", "You've fallen down a hole!".length());
+							toast.show();
+							Intent intent = getIntent();
+							Intent levelDown = new Intent(context, AccelerometerPlayActivity.class);
+							Bundle parem = new Bundle();
+							Bundle oldParem = intent.getExtras();
+							parem.putInt("level", oldParem.getInt("level")+1);
+							parem.putInt("CcY", CellCountY-1);
+							parem.putInt("CcX", CellCountX-1);
+							levelDown.putExtras(parem);//Fix parem
+							((Activity)context).startActivityForResult(levelDown,1);
+							pause=true;
+						}
+						
+						/*mBoxX = 0;
 						mBoxY = 0;
 						mPosX = mHorizontalBound;
 						mPosY = mVerticalBound;
@@ -278,7 +318,17 @@ public class AccelerometerPlayActivity extends Activity {
 						mLastPosY = mVerticalBound-1;
 						mLastT = 0;
 						mLastDeltaT = 0;
-						GenerateMaze2(CellCountX,CellCountY, TrapCount, Boxes);
+						GenerateMaze2(CellCountX,CellCountY, TrapCount, Boxes);*/
+					}
+					if(Boxes[mBoxX][mBoxY].isGoal){
+						if(!pause){
+							pause = true;
+							Toast toast = Toast.makeText(context, "You've escaped one level up!", "You've escaped one level up!".length());
+							toast.show();
+							Intent intent = getIntent();
+							setResult(1, intent);
+							finish();
+						}
 					}
 				//}
 			}
@@ -289,7 +339,7 @@ public class AccelerometerPlayActivity extends Activity {
 		 */
 		class ParticleSystem {
 			static final int NUM_PARTICLES = 1;
-			private Particle mBalls[] = new Particle[NUM_PARTICLES];
+			public Particle mBalls[] = new Particle[NUM_PARTICLES];
 
 			ParticleSystem() {
 				/*
@@ -312,7 +362,7 @@ public class AccelerometerPlayActivity extends Activity {
 					if (mLastDeltaT != 0) {
 						final float dTC = dT / mLastDeltaT;
 						final int count = mBalls.length;
-						for (int i = 0; i < count; i++) {
+						for (int i = 0; i < count && !pause; i++) {
 							mBalls[i].computePhysics(sx, sy, dT, dTC);
 						}
 					}
@@ -433,8 +483,11 @@ public class AccelerometerPlayActivity extends Activity {
 			mSensorManager.unregisterListener(this);
 		}
 
-		public SimulationView(Context context) {
+		public SimulationView(Context context, int CcX, int CcY) {
 			super(context);
+			CellCountX = Math.max(Math.max(CcX, 2),CcY/2);
+			CellCountY = Math.max(Math.max(CcY, 2),CcX/2);
+			TrapCount = (int)(CellCountX*CellCountY/7f);
 			mAccelerometer = mSensorManager
 					.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
